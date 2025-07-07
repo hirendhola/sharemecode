@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { useRef, useState, useEffect } from "react";
 import { useParams } from "react-router";
 
@@ -44,7 +45,6 @@ const TextEditor = () => {
       }
 
       const result = await response.json();
-      console.log("Document saved successfully:", result);
       return result;
     } catch (error) {
       console.error("Error saving document:", error);
@@ -56,13 +56,10 @@ const TextEditor = () => {
     if (!id) return null;
 
     try {
-      console.log('Fetching document from:', `${API_BASE_URL}/api/documents/${id}`);
       const response = await fetch(`${API_BASE_URL}/api/documents/${id}`);
 
-      console.log('Response status:', response.status);
 
       if (response.status === 404) {
-        console.log('Document not found (404)');
         setDocumentExists(false);
         return null;
       }
@@ -72,7 +69,6 @@ const TextEditor = () => {
       }
 
       const result = await response.json();
-      console.log('Fetched document result:', result);
       setDocumentExists(true);
       return result.document;
     } catch (error) {
@@ -91,14 +87,10 @@ const TextEditor = () => {
         // Try multiple approaches to set content
         try {
           editorRef.current.textContent = content;
-          console.log('Content set via textContent');
         } catch (error) {
-          console.log('textContent failed, trying innerText:', error);
           try {
             editorRef.current.innerText = content;
-            console.log('Content set via innerText');
           } catch (innerError) {
-            console.log('innerText failed, trying innerHTML:', innerError);
             editorRef.current.innerHTML = content.replace(/\n/g, '<br>');
           }
         }
@@ -215,18 +207,14 @@ const TextEditor = () => {
     const loadDocument = async () => {
       if (!id) return;
 
-      console.log('Loading document for ID:', id);
       setIsLoading(true);
 
       try {
         const document = await fetchDocument();
-        console.log('Document fetched:', document);
 
         if (document && document.data) {
-          console.log('Setting document data:', document.data);
           setEditorContent(document.data);
         } else {
-          console.log('No document data found, setting default text');
           const defaultText = "Welcome to the text editor!\n\nStart typing here...";
           setEditorContent(defaultText);
           setDocumentExists(false);
@@ -247,15 +235,6 @@ const TextEditor = () => {
   useEffect(() => {
     updateLineNumbers();
   }, [text]);
-
-  // Debug effect to log environment variables
-  useEffect(() => {
-    console.log('API_BASE_URL:', API_BASE_URL);
-    console.log('Environment variables:', {
-      VITE_API_URL: import.meta.env.VITE_API_URL,
-      VITE_FRONTEND_DOMAIN: import.meta.env.VITE_FRONTEND_DOMAIN,
-    });
-  }, []);
 
   const lineNumbers = Array.from(
     { length: Math.max(lineCount, 20) },
