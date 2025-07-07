@@ -56,18 +56,23 @@ const TextEditor = () => {
     if (!id) return null;
 
     try {
+      console.log('Fetching document from:', `${API_BASE_URL}/api/documents/${id}`);
       const response = await fetch(`${API_BASE_URL}/api/documents/${id}`);
 
+      console.log('Response status:', response.status);
+
       if (response.status === 404) {
+        console.log('Document not found (404)');
         setDocumentExists(false);
         return null;
       }
 
       if (!response.ok) {
-        throw new Error("Failed to fetch document");
+        throw new Error(`Failed to fetch document: ${response.status}`);
       }
 
       const result = await response.json();
+      console.log('Fetched document result:', result);
       setDocumentExists(true);
       return result.document;
     } catch (error) {
@@ -75,6 +80,35 @@ const TextEditor = () => {
       setDocumentExists(false);
       return null;
     }
+  };
+
+  const setEditorContent = (content: string) => {
+    setText(content);
+    
+    // Use requestAnimationFrame to ensure DOM is ready
+    requestAnimationFrame(() => {
+      if (editorRef.current) {
+        // Try multiple approaches to set content
+        try {
+          editorRef.current.textContent = content;
+          console.log('Content set via textContent');
+        } catch (error) {
+          console.log('textContent failed, trying innerText:', error);
+          try {
+            editorRef.current.innerText = content;
+            console.log('Content set via innerText');
+          } catch (innerError) {
+            console.log('innerText failed, trying innerHTML:', innerError);
+            editorRef.current.innerHTML = content.replace(/\n/g, '<br>');
+          }
+        }
+        
+        // Force update line numbers after content is set
+        setTimeout(() => {
+          updateLineNumbers();
+        }, 50);
+      }
+    });
   };
 
   const handleInput = () => {
@@ -162,7 +196,7 @@ const TextEditor = () => {
 
   const handleShare = async () => {
     try {
-      const domain = import.meta.env.FRONTEND_DOMAIN || window.location.origin;
+      const domain = import.meta.env.VITE_FRONTEND_DOMAIN || window.location.origin;
       const shareUrl = `${domain}/${id}`;
 
       await navigator.clipboard.writeText(shareUrl);
@@ -181,34 +215,27 @@ const TextEditor = () => {
     const loadDocument = async () => {
       if (!id) return;
 
+      console.log('Loading document for ID:', id);
       setIsLoading(true);
 
       try {
         const document = await fetchDocument();
+        console.log('Document fetched:', document);
 
         if (document && document.data) {
-          setText(document.data);
-          if (editorRef.current) {
-            editorRef.current.innerText = document.data;
-          }
+          console.log('Setting document data:', document.data);
+          setEditorContent(document.data);
         } else {
-          const defaultText =
-            "Welcome to the text editor!\n\nStart typing here...";
-          setText(defaultText);
-          if (editorRef.current) {
-            editorRef.current.innerText = defaultText;
-          }
+          console.log('No document data found, setting default text');
+          const defaultText = "Welcome to the text editor!\n\nStart typing here...";
+          setEditorContent(defaultText);
+          setDocumentExists(false);
         }
-
-        updateLineNumbers();
       } catch (error) {
         console.error("Error loading document:", error);
-        const defaultText =
-          "Welcome to the text editor!\n\nStart typing here...";
-        setText(defaultText);
-        if (editorRef.current) {
-          editorRef.current.innerText = defaultText;
-        }
+        const defaultText = "Welcome to the text editor!\n\nStart typing here...";
+        setEditorContent(defaultText);
+        setDocumentExists(false);
       } finally {
         setIsLoading(false);
       }
@@ -220,6 +247,15 @@ const TextEditor = () => {
   useEffect(() => {
     updateLineNumbers();
   }, [text]);
+
+  // Debug effect to log environment variables
+  useEffect(() => {
+    console.log('API_BASE_URL:', API_BASE_URL);
+    console.log('Environment variables:', {
+      VITE_API_URL: import.meta.env.VITE_API_URL,
+      VITE_FRONTEND_DOMAIN: import.meta.env.VITE_FRONTEND_DOMAIN,
+    });
+  }, []);
 
   const lineNumbers = Array.from(
     { length: Math.max(lineCount, 20) },
