@@ -248,7 +248,7 @@ const TextEditor = () => {
       <div className="w-full h-screen bg-gray-900 text-gray-100 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-400 mx-auto mb-4"></div>
-          <p className="text-gray-400">Loading document...</p>
+          <p className="text-gray-400">Now this tool works slowly because I moved the backend to a free service. It was costing money with no users 🥲</p>
         </div>
       </div>
     );
