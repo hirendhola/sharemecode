@@ -53,11 +53,10 @@ const TextEditor = () => {
   };
 
   const fetchDocument = async () => {
-    if (!id) return null;
-
     try {
-      const response = await fetch(`${API_BASE_URL}/api/documents/${id}`);
-
+      const response = await fetch(
+        `${API_BASE_URL}/api/documents/${id ? id : "hirendhola"}`
+      );
 
       if (response.status === 404) {
         setDocumentExists(false);
@@ -80,7 +79,7 @@ const TextEditor = () => {
 
   const setEditorContent = (content: string) => {
     setText(content);
-    
+
     // Use requestAnimationFrame to ensure DOM is ready
     requestAnimationFrame(() => {
       if (editorRef.current) {
@@ -91,10 +90,10 @@ const TextEditor = () => {
           try {
             editorRef.current.innerText = content;
           } catch (innerError) {
-            editorRef.current.innerHTML = content.replace(/\n/g, '<br>');
+            editorRef.current.innerHTML = content.replace(/\n/g, "<br>");
           }
         }
-        
+
         // Force update line numbers after content is set
         setTimeout(() => {
           updateLineNumbers();
@@ -188,8 +187,9 @@ const TextEditor = () => {
 
   const handleShare = async () => {
     try {
-      const domain = import.meta.env.VITE_FRONTEND_DOMAIN || window.location.origin;
-      const shareUrl = `${domain}/${id}`;
+      const domain =
+        import.meta.env.VITE_FRONTEND_DOMAIN || window.location.origin;
+      const shareUrl = `${domain}/${id ? id : "hirendhola"}`;
 
       await navigator.clipboard.writeText(shareUrl);
 
@@ -205,7 +205,7 @@ const TextEditor = () => {
 
   useEffect(() => {
     const loadDocument = async () => {
-      if (!id) return;
+      // if (!id) return;
 
       setIsLoading(true);
 
@@ -215,13 +215,15 @@ const TextEditor = () => {
         if (document && document.data) {
           setEditorContent(document.data);
         } else {
-          const defaultText = "Welcome to the text editor!\n\nStart typing here...";
+          const defaultText =
+            "Welcome to the text editor!\n\nStart typing here...";
           setEditorContent(defaultText);
           setDocumentExists(false);
         }
       } catch (error) {
         console.error("Error loading document:", error);
-        const defaultText = "Welcome to the text editor!\n\nStart typing here...";
+        const defaultText =
+          "Welcome to the text editor!\n\nStart typing here...";
         setEditorContent(defaultText);
         setDocumentExists(false);
       } finally {
@@ -253,60 +255,7 @@ const TextEditor = () => {
   }
 
   return (
-    <div className="w-full h-screen bg-gray-900 text-gray-100 font-mono text-sm flex flex-col relative">
-      <style>{`
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 8px;
-          height: 8px;
-        }
-        
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: #1f2937;
-          border-radius: 4px;
-        }
-        
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: #4b5563;
-          border-radius: 4px;
-        }
-        
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: #6b7280;
-        }
-        
-        .custom-scrollbar::-webkit-scrollbar-corner {
-          background: #1f2937;
-        }
-        
-        /* Firefox */
-        .custom-scrollbar {
-          scrollbar-width: thin;
-          scrollbar-color: #4b5563 #1f2937;
-        }
-
-        .toast-enter {
-          opacity: 0;
-          transform: translateX(100%);
-        }
-        
-        .toast-enter-active {
-          opacity: 1;
-          transform: translateX(0);
-          transition: opacity 300ms, transform 300ms;
-        }
-        
-        .toast-exit {
-          opacity: 1;
-          transform: translateX(0);
-        }
-        
-        .toast-exit-active {
-          opacity: 0;
-          transform: translateX(100%);
-          transition: opacity 300ms, transform 300ms;
-        }
-      `}</style>
-
+    <div className="w-full overflow-x-auto h-screen bg-gray-900 text-gray-100 font-mono text-sm flex flex-col relative">
       {showToast && (
         <div className="fixed top-11 right-4 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg z-50 flex items-center space-x-2">
           <svg
@@ -331,7 +280,7 @@ const TextEditor = () => {
           <div className="w-3 h-3 bg-red-500 rounded-full"></div>
           <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
           <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-          <span className="ml-4 text-gray-300">{id}</span>
+          <span className="ml-4 text-gray-300">{id ? id : "hirendhola"}</span>
         </div>
         <div className="flex items-center space-x-2">
           {isSaving ? (

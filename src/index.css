@@ -1,2 +1,52 @@
 @import "tailwindcss";
 
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #1f2937;
+  border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #4b5563;
+  border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #6b7280;
+}
+
+.custom-scrollbar::-webkit-scrollbar-corner {
+  background: #1f2937;
+}
+
+/* Firefox */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #4b5563 #1f2937;
+}
+
+.toast-enter {
+  opacity: 0;
+  transform: translateX(100%);
+}
+
+.toast-enter-active {
+  opacity: 1;
+  transform: translateX(0);
+  transition: opacity 300ms, transform 300ms;
+}
+
+.toast-exit {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.toast-exit-active {
+  opacity: 0;
+  transform: translateX(100%);
+  transition: opacity 300ms, transform 300ms;
+}
