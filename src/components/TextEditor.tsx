@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import { useRef, useState, useEffect } from "react";
 import { useParams } from "react-router";
 import {

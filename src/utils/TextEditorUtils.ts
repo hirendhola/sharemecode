@@ -1,5 +1,4 @@
 // utils/TextEditorUtils.ts
-/* eslint-disable @typescript-eslint/no-explicit-any */
 
 export const API_BASE_URL: string =
   import.meta.env.VITE_API_URL || "http://localhost:3000";
