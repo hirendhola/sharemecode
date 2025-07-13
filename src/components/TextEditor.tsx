@@ -1,6 +1,16 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { useRef, useState, useEffect } from "react";
 import { useParams } from "react-router";
+import {
+  updateLineNumbers,
+  saveDocument,
+  fetchDocument,
+  setEditorContent,
+  handleTabInsert,
+  handleManualPaste,
+  syncScroll,
+  handleShare,
+} from "@/utils/TextEditorUtils";
 
 let saveTimeout: ReturnType<typeof setTimeout>;
 
@@ -15,216 +25,85 @@ const TextEditor = () => {
   const [documentExists, setDocumentExists] = useState(false);
   const { id } = useParams();
 
-  const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
-
-  const updateLineNumbers = () => {
-    if (!editorRef.current) return;
-
-    const content = editorRef.current.innerText;
-    const lines = content.split("\n").length;
-    setLineCount(lines);
-  };
-
-  const saveDocument = async (content: string) => {
-    if (!id) return;
-
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/documents`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          textId: id,
-          data: content,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to save document");
-      }
-
-      const result = await response.json();
-      return result;
-    } catch (error) {
-      console.error("Error saving document:", error);
-      throw error;
-    }
-  };
-
-  const fetchDocument = async () => {
-    try {
-      const response = await fetch(
-        `${API_BASE_URL}/api/documents/${id ? id : "hirendhola"}`
-      );
-
-      if (response.status === 404) {
-        setDocumentExists(false);
-        return null;
-      }
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch document: ${response.status}`);
-      }
-
-      const result = await response.json();
-      setDocumentExists(true);
-      return result.document;
-    } catch (error) {
-      console.error("Error fetching document:", error);
-      setDocumentExists(false);
-      return null;
-    }
-  };
-
-  const setEditorContent = (content: string) => {
-    setText(content);
-
-    // Use requestAnimationFrame to ensure DOM is ready
-    requestAnimationFrame(() => {
-      if (editorRef.current) {
-        // Try multiple approaches to set content
-        try {
-          editorRef.current.textContent = content;
-        } catch (error) {
-          try {
-            editorRef.current.innerText = content;
-          } catch (innerError) {
-            editorRef.current.innerHTML = content.replace(/\n/g, "<br>");
-          }
-        }
-
-        // Force update line numbers after content is set
-        setTimeout(() => {
-          updateLineNumbers();
-        }, 50);
-      }
-    });
+  const updateLines = () => {
+    updateLineNumbers(editorRef, setLineCount);
   };
 
   const handleInput = () => {
-    if (editorRef.current) {
-      const content = editorRef.current.innerText;
-      setText(content);
-      updateLineNumbers();
+    if (!editorRef.current) return;
 
-      clearTimeout(saveTimeout);
-      setIsSaving(true);
+    const content = editorRef.current.innerText;
+    setText(content);
+    updateLines();
 
-      saveTimeout = setTimeout(async () => {
-        try {
-          await saveDocument(content);
-          setIsSaving(false);
-          setDocumentExists(true);
-        } catch (error) {
-          setIsSaving(false);
-          console.error("Auto-save failed:", error);
-        }
-      }, 700);
-    }
+    clearTimeout(saveTimeout);
+    setIsSaving(true);
+
+    saveTimeout = setTimeout(async () => {
+      try {
+        await saveDocument(id, content);
+        setIsSaving(false);
+        setDocumentExists(true);
+      } catch (error) {
+        setIsSaving(false);
+        console.error("Auto-save failed:", error);
+      }
+    }, 300);
   };
 
   const handlePaste = (e: React.ClipboardEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    const pastedText = e.clipboardData.getData("text/plain");
+    handleManualPaste(e);
+    if (!editorRef.current) return;
 
-    const selection = window.getSelection();
-    if (!selection || !selection.rangeCount) return;
+    const content = editorRef.current.innerText;
+    setText(content);
+    updateLines();
 
-    const range = selection.getRangeAt(0);
-    range.deleteContents();
+    clearTimeout(saveTimeout);
+    setIsSaving(true);
 
-    const textNode = document.createTextNode(pastedText);
-    range.insertNode(textNode);
-
-    range.setStartAfter(textNode);
-    range.setEndAfter(textNode);
-    selection.removeAllRanges();
-    selection.addRange(range);
-
-    if (editorRef.current) {
-      const content = editorRef.current.innerText;
-      setText(content);
-      updateLineNumbers();
-
-      clearTimeout(saveTimeout);
-      setIsSaving(true);
-
-      saveTimeout = setTimeout(async () => {
-        try {
-          await saveDocument(content);
-          setIsSaving(false);
-          setDocumentExists(true);
-        } catch (error) {
-          setIsSaving(false);
-          console.error("Auto-save failed:", error);
-        }
-      }, 700);
-    }
+    saveTimeout = setTimeout(async () => {
+      try {
+        await saveDocument(id, content);
+        setIsSaving(false);
+        setDocumentExists(true);
+      } catch (error) {
+        setIsSaving(false);
+        console.error("Auto-save failed:", error);
+      }
+    }, 700);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
-    if (e.key === "Tab") {
-      e.preventDefault();
-      const selection = window.getSelection();
-      if (!selection || !selection.rangeCount) return;
-
-      const range = selection.getRangeAt(0);
-      const tabNode = document.createTextNode("    ");
-      range.insertNode(tabNode);
-      range.setStartAfter(tabNode);
-      range.setEndAfter(tabNode);
-      selection.removeAllRanges();
-      selection.addRange(range);
-    }
+    handleTabInsert(e);
   };
 
   const handleScroll = () => {
-    if (editorRef.current && lineNumbersRef.current) {
-      lineNumbersRef.current.scrollTop = editorRef.current.scrollTop;
-    }
+    syncScroll(editorRef, lineNumbersRef);
   };
 
-  const handleShare = async () => {
-    try {
-      const domain =
-        import.meta.env.VITE_FRONTEND_DOMAIN || window.location.origin;
-      const shareUrl = `${domain}/${id ? id : "hirendhola"}`;
-
-      await navigator.clipboard.writeText(shareUrl);
-
-      setShowToast(true);
-
-      setTimeout(() => {
-        setShowToast(false);
-      }, 2000);
-    } catch (err) {
-      console.error("Failed to copy to clipboard:", err);
-    }
+  const handleShareClick = async () => {
+    await handleShare(id);
+    setShowToast(true);
+    setTimeout(() => setShowToast(false), 2000);
   };
 
   useEffect(() => {
     const loadDocument = async () => {
-      // if (!id) return;
-
       setIsLoading(true);
-
       try {
-        const document = await fetchDocument();
-
+        const document = await fetchDocument(id, setDocumentExists);
         if (document && document.data) {
-          setEditorContent(document.data);
+          setEditorContent(document.data, editorRef, setText, updateLines);
         } else {
-          const defaultText =
-            "Welcome to the text editor!\n\nStart typing here...";
-          setEditorContent(defaultText);
+          const defaultText = "Welcome to the text editor!\n\nStart typing here...";
+          setEditorContent(defaultText, editorRef, setText, updateLines);
           setDocumentExists(false);
         }
       } catch (error) {
         console.error("Error loading document:", error);
-        const defaultText =
-          "Welcome to the text editor!\n\nStart typing here...";
-        setEditorContent(defaultText);
+        const defaultText = "Welcome to the text editor!\n\nStart typing here...";
+        setEditorContent(defaultText, editorRef, setText, updateLines);
         setDocumentExists(false);
       } finally {
         setIsLoading(false);
@@ -235,20 +114,19 @@ const TextEditor = () => {
   }, [id]);
 
   useEffect(() => {
-    updateLineNumbers();
+    updateLines();
   }, [text]);
 
-  const lineNumbers = Array.from(
-    { length: Math.max(lineCount, 20) },
-    (_, i) => i + 1
-  );
+  const lineNumbers = Array.from({ length: Math.max(lineCount, 20) }, (_, i) => i + 1);
 
   if (isLoading) {
     return (
       <div className="w-full h-screen bg-gray-900 text-gray-100 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-400 mx-auto mb-4"></div>
-          <p className="text-gray-400">Now this tool works slowly because I moved the backend to a free service. It was costing money with no users 🥲</p>
+          <p className="text-gray-400">
+            Now this tool works slowly because I moved the backend to a free service. It was costing money with no users 🥲
+          </p>
         </div>
       </div>
     );
@@ -258,18 +136,8 @@ const TextEditor = () => {
     <div className="w-full overflow-x-auto h-screen bg-gray-900 text-gray-100 font-mono text-sm flex flex-col relative">
       {showToast && (
         <div className="fixed top-11 right-4 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg z-50 flex items-center space-x-2">
-          <svg
-            className="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M5 13l4 4L19 7"
-            />
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
           </svg>
           <span className="text-sm font-medium">Link copied!</span>
         </div>
@@ -280,7 +148,7 @@ const TextEditor = () => {
           <div className="w-3 h-3 bg-red-500 rounded-full"></div>
           <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
           <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-          <span className="ml-4 text-gray-300">{id ? id : "hirendhola"}</span>
+          <span className="ml-4 text-gray-300">{id || "hirendhola"}</span>
         </div>
         <div className="flex items-center space-x-2">
           {isSaving ? (
@@ -289,12 +157,10 @@ const TextEditor = () => {
               <span className="text-blue-400 text-xs">Saving...</span>
             </div>
           ) : (
-            <span className="text-blue-400 text-xs">
-              {documentExists ? "Saved" : "Ready"}
-            </span>
+            <span className="text-blue-400 text-xs">{documentExists ? "Saved" : "Ready"}</span>
           )}
           <button
-            onClick={handleShare}
+            onClick={handleShareClick}
             className="bg-blue-400 hover:bg-gray-200 hover:text-gray-900 text-white px-3 py-2 rounded text-[15px] transition-colors duration-200 flex items-center text-center"
           >
             Share
